@@ -1,0 +1,21 @@
+{
+  "name": "your-project-name",
+  "version": "1.0.0",
+  "description": "Your project description",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "puppeteer": "latest",
+    "puppeteer-extra": "latest",
+    "puppeteer-extra-plugin-stealth": "latest",
+    "p-limit": "latest"
+  },
+  "devDependencies": {
+    "eslint": "latest"
+  },
+  "author": "Your Name",
+  "license": "ISC"
+}
