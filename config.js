@@ -9,7 +9,7 @@ import { log } from './logger.js';
 
 // Concurrent Processing Configuration
 // Controls the maximum number of concurrent browser pages and recursion depth
-export const MAX_CONCURRENT_PAGES = 7;
+export const MAX_CONCURRENT_PAGES = 2;
 export const MAX_DEPTH = 100;
 
 // Timeout Settings
@@ -228,7 +228,55 @@ export const CONTENT_SELECTORS = [
 
 
 
-// Optionally validate configuration on import
-validateConfiguration();
+// Note: validateConfiguration() can be called manually when needed
+// Removed automatic validation to prevent circular dependency issues
+
+// ENHANCED: Keyword Filtering Configuration with Advanced Programming Techniques
+// Design by Contract: Define keyword filtering contracts and invariants
+
+/**
+ * Keyword filtering configuration with type-driven design
+ * @typedef {Object} KeywordFilterOptions
+ * @property {string[]} keywords - Array of keywords to filter URLs by
+ * @property {boolean} caseSensitive - Whether keyword matching should be case sensitive
+ * @property {boolean} exactMatch - Whether to require exact keyword match vs partial
+ * @property {boolean} logicalAnd - Whether all keywords must be present (AND) vs any (OR)
+ */
+export const KEYWORD_FILTER_OPTIONS = {
+    caseSensitive: false,     // Default to case-insensitive matching
+    exactMatch: false,        // Default to partial matching
+    logicalAnd: false,        // Default to OR logic (any keyword matches)
+    minKeywordLength: 2,      // Minimum keyword length for validation
+    maxKeywords: 50           // Maximum number of keywords for performance
+};
+
+/**
+ * URL Content Analysis Configuration
+ * Advanced technique: Property-based testing considerations
+ */
+export const URL_CONTENT_ANALYSIS = {
+    analyzeTitle: true,       // Check page title for keywords
+    analyzeMetaDescription: true, // Check meta description
+    analyzeUrl: true,         // Check URL path and parameters
+    analyzeHeadings: true,    // Check h1, h2, h3 elements
+    analyzeContent: false,    // Check full page content (expensive)
+    maxContentLength: 1000    // Limit content analysis for performance
+};
+
+/**
+ * Defensive Programming: Input validation patterns
+ */
+export const KEYWORD_VALIDATION_PATTERNS = {
+    // Prevent malicious keywords
+    forbiddenPatterns: [
+        /<script/i,           // Prevent script injection
+        /javascript:/i,       // Prevent javascript URLs
+        /data:/i,            // Prevent data URLs
+        /[<>"']/            // Prevent HTML/XML injection
+    ],
+    // Sanitization rules
+    sanitizeWhitespace: true,
+    normalizeCase: true
+};
 
 // end config.js

@@ -17,6 +17,7 @@ import {
 import { processUrl } from './processUrls.js';
 import { log } from './logger.js';
 import { normalizeUrl } from './urlUtils.js';
+import { shouldVisitUrl } from './smartUrlFilter.js';
 
 // Apply stealth plugin to enhance browser automation
 puppeteer.use(StealthPlugin());
@@ -50,7 +51,7 @@ const crawlWebsite = async (startUrl, options) => {
     // Log start of crawling process
     log(`Starting crawl from: ${startUrl}`, FINAL_OPTIONS.logFilePath);
 
-    // Main crawling loop
+// Main crawling loop
     const activePromises = new Set(); // To keep track of active processing promises
 
     // Start processing URLs
@@ -63,34 +64,71 @@ const crawlWebsite = async (startUrl, options) => {
                 continue; // Skip if already visited
             }
 
+            // ENHANCED: Use smart URL filter to avoid problematic URLs
+            const filterOptions = {
+                keywords: FINAL_OPTIONS.keywords
+            };
+            
+            const shouldVisit = shouldVisitUrl(url, FINAL_OPTIONS.baseUrl || startUrl, filterOptions, FINAL_OPTIONS.logFilePath);
+            
+            if (!shouldVisit) {
+                VISITED_URLS.add(url); // Mark as visited to avoid reprocessing
+                continue; // Skip to next URL
+            }
+
             // Log current queue size before processing
             log(`[DEBUG] Current queue size before processing: ${QUEUE.length}`, FINAL_OPTIONS.logFilePath);
             log(`[DEBUG] Processing URL: ${url}`, FINAL_OPTIONS.logFilePath);
             
             const promise = processUrl(
-                browser,
-                url,
-                FINAL_OPTIONS.outputFolder,
-                FINAL_OPTIONS.logFilePath,
-                UNIQUE_URLS,
-                VISITED_URLS,
-                new URL(options.baseUrl).href, // Pass the base URL correctly
-                FINAL_OPTIONS.keywords,          // Pass keywords
-                FINAL_OPTIONS.outputFormat       // Pass output format
+            browser,
+            url,
+            FINAL_OPTIONS.outputFolder,
+            FINAL_OPTIONS.logFilePath,
+            UNIQUE_URLS,
+            VISITED_URLS,
+            FINAL_OPTIONS.baseUrl || startUrl, // Use consistent baseUrl
+            FINAL_OPTIONS.keywords,          // Pass keywords
+            FINAL_OPTIONS.outputFormat       // Pass output format
             ).then(discoveredLinks => {
-                // Add discovered links to queue for further processing
+                log(`[DEBUG] processUrl returned ${discoveredLinks.length} discovered links`, FINAL_OPTIONS.logFilePath);
+                
+                // Add discovered links to queue for further processing (with smart filtering)
+                let queuedCount = 0;
+                let filteredCount = 0;
+                
                 discoveredLinks.forEach(link => {
-                    if (!UNIQUE_URLS.has(link) && depth + 1 <= FINAL_OPTIONS.maxDepth) { // Check depth here
-                        UNIQUE_URLS.add(link);
-                        QUEUE.push({ url: link, depth: depth + 1 }); // Increment depth for new links
+                    if (!UNIQUE_URLS.has(link) && depth + 1 <= FINAL_OPTIONS.maxDepth) {
+                        // Apply smart filter to newly discovered links
+                        const linkFilterOptions = {
+                            keywords: FINAL_OPTIONS.keywords
+                        };
+                        
+                        const shouldVisitDiscoveredLink = shouldVisitUrl(link, FINAL_OPTIONS.baseUrl || startUrl, linkFilterOptions, FINAL_OPTIONS.logFilePath);
+                        
+                        if (shouldVisitDiscoveredLink) {
+                            UNIQUE_URLS.add(link);
+                            QUEUE.push({ url: link, depth: depth + 1 });
+                            queuedCount++;
+                            log(`[DEBUG] Queued for processing: ${link}`, FINAL_OPTIONS.logFilePath);
+                        } else {
+                            filteredCount++;
+                            log(`[DEBUG] Filtered out discovered link: ${link}`, FINAL_OPTIONS.logFilePath);
+                        }
+                    } else {
+                        log(`[DEBUG] Skipped queuing (duplicate or max depth): ${link}`, FINAL_OPTIONS.logFilePath);
                     }
                 });
+                
+                log(`[DEBUG] Added ${queuedCount} new URLs to queue. Filtered out ${filteredCount} URLs. Queue size now: ${QUEUE.length}`, FINAL_OPTIONS.logFilePath);
 
                 // Mark the URL as visited
                 VISITED_URLS.add(url);
                 activePromises.delete(promise); // Remove the completed promise from active set
             }).catch(error => {
                 log(`[ERROR] Error processing URL ${url}: ${error.message}`, FINAL_OPTIONS.logFilePath);
+                log(`[ERROR] Error stack: ${error.stack}`, FINAL_OPTIONS.logFilePath);
+                VISITED_URLS.add(url); // Mark as visited even if failed to avoid retry loops
                 activePromises.delete(promise); // Remove the failed promise from active set
             });
 
