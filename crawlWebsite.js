@@ -6,8 +6,6 @@
 
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-import path from 'path';
-import fs from 'fs';
 
 import { 
     MAX_CONCURRENT_PAGES, 
@@ -40,9 +38,9 @@ const crawlWebsite = async (startUrl, options) => {
     // Launch browser or use provided instance
     const browser = FINAL_OPTIONS.browser || await puppeteer.launch(BROWSER_LAUNCH_OPTIONS);
     
-    // Initialize sets to track unique and visited URLs
-    const UNIQUE_URLS = new Set();
-    const VISITED_URLS = new Set();
+    // Initialize sets to track unique and visited URLs (use existing data for continuation)
+    const UNIQUE_URLS = FINAL_OPTIONS.uniqueUrls || new Set();
+    const VISITED_URLS = FINAL_OPTIONS.visitedUrls || new Set();
 
     // Initialize crawl queue with start URL
     const QUEUE = [{ url: startUrl, depth: 0 }];
@@ -124,11 +122,37 @@ const crawlWebsite = async (startUrl, options) => {
 
                 // Mark the URL as visited
                 VISITED_URLS.add(url);
+                
+                // Periodically save progress to persistence (every 10 processed URLs)
+                if (FINAL_OPTIONS.urlPersistence && FINAL_OPTIONS.hostname && VISITED_URLS.size % 10 === 0) {
+                    FINAL_OPTIONS.urlPersistence.saveProcessedUrls(
+                        FINAL_OPTIONS.hostname,
+                        UNIQUE_URLS,
+                        VISITED_URLS,
+                        VISITED_URLS.size
+                    ).catch(error => {
+                        log(`[WARN] Failed to save progress: ${error.message}`, FINAL_OPTIONS.logFilePath);
+                    });
+                }
+                
                 activePromises.delete(promise); // Remove the completed promise from active set
             }).catch(error => {
                 log(`[ERROR] Error processing URL ${url}: ${error.message}`, FINAL_OPTIONS.logFilePath);
                 log(`[ERROR] Error stack: ${error.stack}`, FINAL_OPTIONS.logFilePath);
                 VISITED_URLS.add(url); // Mark as visited even if failed to avoid retry loops
+                
+                // Save progress even on error (every 10 processed URLs)
+                if (FINAL_OPTIONS.urlPersistence && FINAL_OPTIONS.hostname && VISITED_URLS.size % 10 === 0) {
+                    FINAL_OPTIONS.urlPersistence.saveProcessedUrls(
+                        FINAL_OPTIONS.hostname,
+                        UNIQUE_URLS,
+                        VISITED_URLS,
+                        VISITED_URLS.size
+                    ).catch(error => {
+                        log(`[WARN] Failed to save progress: ${error.message}`, FINAL_OPTIONS.logFilePath);
+                    });
+                }
+                
                 activePromises.delete(promise); // Remove the failed promise from active set
             });
 
@@ -137,6 +161,21 @@ const crawlWebsite = async (startUrl, options) => {
 
         // Wait for a short period to allow for new URLs to be processed
         await new Promise(resolve => setTimeout(resolve, 100)); // Adjust the delay as needed
+    }
+
+    // Final persistence save at completion
+    if (FINAL_OPTIONS.urlPersistence && FINAL_OPTIONS.hostname) {
+        try {
+            await FINAL_OPTIONS.urlPersistence.saveProcessedUrls(
+                FINAL_OPTIONS.hostname,
+                UNIQUE_URLS,
+                VISITED_URLS,
+                VISITED_URLS.size
+            );
+            log(`[INFO] Final progress saved: ${VISITED_URLS.size} URLs processed`, FINAL_OPTIONS.logFilePath);
+        } catch (error) {
+            log(`[ERROR] Failed to save final progress: ${error.message}`, FINAL_OPTIONS.logFilePath);
+        }
     }
 
     // Close browser if not provided externally

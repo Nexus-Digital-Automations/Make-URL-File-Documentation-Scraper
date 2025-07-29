@@ -8,9 +8,34 @@
       "prompt": "Complete the documentation scraper project with smart URL filtering, keyword-based filtering, and improved crawling capabilities",
       "dependencies": [],
       "important_files": [],
-      "status": "pending",
+      "status": "completed",
       "requires_research": false,
       "subtasks": []
+    },
+    {
+      "id": "linter_task_active",
+      "title": "Fix Linter Errors - IMMEDIATE",
+      "description": "Fix 1 error and 0 warnings found in recently edited files: main.js",
+      "mode": "DEVELOPMENT",
+      "priority": "high",
+      "status": "pending",
+      "important_files": [
+        "development/linter-errors.md",
+        "main.js"
+      ],
+      "success_criteria": [
+        "All linter errors in edited files resolved",
+        "development/linter-errors.md shows no issues for edited files",
+        "Code passes linting without warnings or errors"
+      ],
+      "created_at": "2025-07-29T04:08:17.215Z",
+      "is_linter_task": true,
+      "linter_summary": {
+        "total_violations": 1,
+        "errors": 1,
+        "warnings": 0,
+        "files_affected": 1
+      }
     },
     {
       "id": "quality-improvement-1753751886721",
@@ -102,6 +127,10 @@
   "strikes_completed_last_run": false,
   "current_task_index": 0,
   "last_mode": "DEVELOPMENT",
-  "execution_count": 2,
-  "last_hook_activation": 1753751891531
+  "execution_count": 26,
+  "last_hook_activation": 1753762109562,
+  "__removedLinterTasks": {
+    "removedCount": 1,
+    "finalTaskCount": 5
+  }
 }

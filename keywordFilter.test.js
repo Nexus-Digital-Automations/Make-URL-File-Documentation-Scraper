@@ -7,10 +7,7 @@
 import { 
     validateKeywords,
     checkKeywordMatch,
-    extractAnalyzableContent,
-    shouldIncludeUrl,
-    generateKeywordFilterTestCases,
-    KEYWORD_FILTER_OPTIONS 
+    generateKeywordFilterTestCases
 } from './keywordFilter.js';
 
 /**

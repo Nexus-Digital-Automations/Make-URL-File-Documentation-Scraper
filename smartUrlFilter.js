@@ -374,8 +374,8 @@ export const shouldVisitUrl = (url, baseUrl, options = {}, logFilePath) => {
 
         // RULE 15: Include if path suggests it's a main content page
         const mainContentIndicators = [
-            /^\/[a-z0-9\-]+$/i,  // Single path segment
-            /^\/[a-z0-9\-]+\/[a-z0-9\-]+$/i,  // Two path segments
+            /^\/[a-z0-9-]+$/i,  // Single path segment
+            /^\/[a-z0-9-]+\/[a-z0-9-]+$/i,  // Two path segments
             /\/index$/i,
             /\/home$/i,
             /\/main$/i,
@@ -439,7 +439,7 @@ export const normalizeUrlForComparison = (url) => {
         urlObj.searchParams.sort();
         
         return urlObj.toString().toLowerCase();
-    } catch (error) {
+    } catch {
         return url.toLowerCase();
     }
 };

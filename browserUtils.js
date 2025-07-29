@@ -142,7 +142,6 @@ const closeExcessTabs = async (browser, logFilePath, maxTabs = MAX_CONCURRENT_PA
  */
 const monitorBrowserResources = async (browser, logFilePath) => {
     try {
-        const pages = await browser.pages();
         const memoryUsage = process.memoryUsage().heapUsed / 1024 / 1024;
         
         if (memoryUsage > RESOURCE_MONITORING.memoryThresholdMB) {

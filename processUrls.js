@@ -26,7 +26,6 @@ import {
 import { extractLinks } from './extractLinks.js';
 import { autoScroll } from './autoScroll.js'; 
 import { saveUniqueUrls } from './saveUniqueUrls.js'; 
-import fs from 'fs';
 import path from 'path';
 
 // Initialize concurrency limiter
@@ -78,11 +77,16 @@ const processUrl = async (
     uniqueUrls,
     visitedUrls,
     baseUrl,
-    keywords = [],
-    outputFormat = 'txt'
+    keywords = []
 ) => {
     // DESIGN BY CONTRACT: Comprehensive precondition validation
     log(`[DEBUG] Starting processUrl with URL: ${url}`, logFilePath);
+    
+    // OPTIMIZATION: Skip processing if URL was already visited (for hostname continuation)
+    if (visitedUrls && visitedUrls.has(url)) {
+        log(`[DEBUG] Skipping already visited URL: ${url}`, logFilePath);
+        return []; // Return empty array as no new links to discover
+    }
     
     // DEFENSIVE PROGRAMMING: Validate all required parameters
     if (!browser || typeof browser.newPage !== 'function') {

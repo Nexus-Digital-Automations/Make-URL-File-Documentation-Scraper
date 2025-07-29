@@ -8,10 +8,11 @@
     "start": "node main.js"
   },
   "dependencies": {
+    "@eslint/js": "^9.32.0",
+    "p-limit": "latest",
     "puppeteer": "latest",
     "puppeteer-extra": "latest",
-    "puppeteer-extra-plugin-stealth": "latest",
-    "p-limit": "latest"
+    "puppeteer-extra-plugin-stealth": "latest"
   },
   "devDependencies": {
     "eslint": "latest"

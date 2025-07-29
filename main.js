@@ -12,14 +12,14 @@ import fs from 'fs';
 
 // Import configurations and utilities
 import {
-    MAX_CONCURRENT_PAGES,
     BROWSER_LAUNCH_OPTIONS,
     LOG_BASE_PATH,
     MAX_DEPTH // Importing MAX_DEPTH from config.js
 } from './config.js';
-import { log, createChildLogger } from './logger.js';
+import { createChildLogger } from './logger.js';
 import { crawlWebsite } from './crawlWebsite.js';
 import { generateValidatedUserAgent } from './userAgentUtils.js';
+import URLPersistence from './urlPersistence.js';
 
 // Apply stealth plugin
 puppeteer.use(StealthPlugin());
@@ -41,24 +41,30 @@ puppeteer.use(StealthPlugin());
             fs.mkdirSync(LOG_BASE_PATH, { recursive: true });
         }
 
-        // ENHANCED: Parse input arguments with keyword support
+        // ENHANCED: Parse input arguments with keyword support and flags
         const INPUT_ARGS = process.argv.slice(2);
-        if (INPUT_ARGS.length < 1) {
-            console.error('\nUsage: node main.js <URL> [keyword1] [keyword2] ...');
+        const FRESH_START = INPUT_ARGS.includes('--fresh');
+        const FILTERED_ARGS = INPUT_ARGS.filter(arg => arg !== '--fresh');
+        
+        if (FILTERED_ARGS.length < 1) {
+            console.error('\nUsage: node main.js <URL> [keyword1] [keyword2] ... [--fresh]');
             console.error('\nExamples:');
-            console.error('  node main.js https://example.com                    # Scrape all URLs');
+            console.error('  node main.js https://example.com                    # Scrape all URLs (continue if previous session)');
+            console.error('  node main.js https://example.com --fresh            # Scrape all URLs (fresh start)');
             console.error('  node main.js https://docs.example.com api rest     # Only URLs containing "api" OR "rest"');
-            console.error('  node main.js https://example.com documentation guide tutorial');
+            console.error('  node main.js https://example.com documentation guide tutorial --fresh');
+            console.error('\nFlags:');
+            console.error('  --fresh    Start fresh crawl, ignoring previous session data');
             console.error('\nKeywords filter URLs and page content to only include pages containing specified terms.');
             process.exit(1);
         }
 
         // The first argument is the actual URL to open
-        const ACTUAL_URL = new URL(INPUT_ARGS[0]);
+        const ACTUAL_URL = new URL(FILTERED_ARGS[0]);
         const BASE_URL_HREF = ACTUAL_URL.href;
         
-        // ENHANCED: Extract keywords from remaining arguments
-        const KEYWORDS = INPUT_ARGS.slice(1).filter(arg => arg.trim().length > 0);
+        // ENHANCED: Extract keywords from remaining arguments (excluding --fresh flag)
+        const KEYWORDS = FILTERED_ARGS.slice(1).filter(arg => arg.trim().length > 0);
         
         if (KEYWORDS.length > 0) {
             console.log(`\n🎯 Keyword Filtering Enabled:`);
@@ -82,10 +88,35 @@ puppeteer.use(StealthPlugin());
         const LOG_FILE_NAME = `${HOSTNAME}_${TIMESTAMP}.log`;
         LOG_FILE_PATH = path.join(OUTPUT_FOLDER, LOG_FILE_NAME);
 
+        // Initialize URL persistence for hostname continuation
+        const urlPersistence = new URLPersistence();
+        
+        // Handle fresh start flag - clear existing data if requested
+        if (FRESH_START) {
+            const hasExistingData = await urlPersistence.hasExistingData(HOSTNAME);
+            if (hasExistingData) {
+                await urlPersistence.clearHostnameData(HOSTNAME);
+                console.log(`\n🗑️  FRESH START: Cleared previous session data for ${HOSTNAME}`);
+            }
+            console.log(`\n🆕 STARTING fresh crawl for hostname: ${HOSTNAME}\n`);
+        } else {
+            const hasExistingData = await urlPersistence.hasExistingData(HOSTNAME);
+            if (hasExistingData) {
+                const stats = await urlPersistence.getHostnameStats(HOSTNAME);
+                console.log(`\n🔄 CONTINUING from previous session:`);
+                console.log(`   Previously processed: ${stats.processedCount} URLs`);
+                console.log(`   Previously visited: ${stats.visitedCount} URLs`);
+                console.log(`   Last updated: ${new Date(stats.lastUpdated).toLocaleString()}\n`);
+            } else {
+                console.log(`\n🆕 STARTING fresh crawl for hostname: ${HOSTNAME}\n`);
+            }
+        }
+
         // Log start of scraping
         const childLog = createChildLogger(LOG_FILE_PATH);
         childLog(`Starting web scraping for: ${BASE_URL_HREF}`, { logLevel: 'INFO' });
         childLog(`Output Folder: ${OUTPUT_FOLDER}`, { logLevel: 'INFO' });
+        childLog(`Fresh start mode: ${FRESH_START ? 'YES' : 'NO'}`, { logLevel: 'INFO' });
 
         // Generate a validated user agent
         const USER_AGENT = generateValidatedUserAgent(5, LOG_FILE_PATH);
@@ -100,7 +131,10 @@ puppeteer.use(StealthPlugin());
             ]
         });
 
-        // ENHANCED: Crawling options with keyword filtering
+        // Load existing processed URLs for continuation
+        const existingData = await urlPersistence.loadProcessedUrls(HOSTNAME);
+        
+        // ENHANCED: Crawling options with keyword filtering and persistence
         const CRAWL_OPTIONS = {
             outputFolder: path.join(OUTPUT_FOLDER, 'texts'), // Always save to texts subfolder
             logFilePath: LOG_FILE_PATH,
@@ -108,8 +142,10 @@ puppeteer.use(StealthPlugin());
             browser: BROWSER,
             keywords: KEYWORDS, // FIXED: Use actual keywords from command line
             baseUrl: BASE_URL_HREF, // Pass the base URL here
-            uniqueUrls: new Set(), // Start with an empty unique URLs set
-            visitedUrls: new Set()  // Start with an empty visited URLs set
+            uniqueUrls: existingData.processedUrls, // Continue from existing processed URLs
+            visitedUrls: existingData.visitedUrls,  // Continue from existing visited URLs
+            urlPersistence: urlPersistence, // Pass persistence instance for saving progress
+            hostname: HOSTNAME // Pass hostname for persistence operations
         };
 
         // Start crawling from the actual URL
