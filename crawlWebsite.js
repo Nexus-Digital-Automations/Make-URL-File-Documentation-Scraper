@@ -46,14 +46,36 @@ const crawlWebsite = async (startUrl, options) => {
     const QUEUE = [{ url: startUrl, depth: 0 }];
     UNIQUE_URLS.add(normalizeUrl(startUrl));
     
+    // CONTINUATION FIX: Add all unvisited URLs to queue for processing
+    const unvisitedUrls = [...UNIQUE_URLS].filter(url => !VISITED_URLS.has(url));
+    log(`[INFO] Continuation check: Found ${UNIQUE_URLS.size} unique URLs, ${VISITED_URLS.size} visited, ${unvisitedUrls.length} unvisited`, FINAL_OPTIONS.logFilePath);
+    
+    if (unvisitedUrls.length > 0) {
+        unvisitedUrls.forEach(url => {
+            // Only add to queue if not already the startUrl (avoid duplicates)
+            if (url !== startUrl) {
+                QUEUE.push({ url, depth: 1 }); // Add with depth 1 since they're discovered links
+            }
+        });
+        log(`[INFO] CONTINUATION: Added ${unvisitedUrls.length - (unvisitedUrls.includes(startUrl) ? 1 : 0)} unvisited URLs to processing queue`, FINAL_OPTIONS.logFilePath);
+        log(`[INFO] Total queue size after continuation setup: ${QUEUE.length}`, FINAL_OPTIONS.logFilePath);
+    }
+    
     // Log start of crawling process
     log(`Starting crawl from: ${startUrl}`, FINAL_OPTIONS.logFilePath);
 
 // Main crawling loop
     const activePromises = new Set(); // To keep track of active processing promises
+    let processedCount = 0; // Track number of URLs processed in this session
+
+    log(`[INFO] MAIN LOOP: Starting with queue size: ${QUEUE.length}, active promises: ${activePromises.size}`, FINAL_OPTIONS.logFilePath);
 
     // Start processing URLs
     while (QUEUE.length > 0 || activePromises.size > 0) {
+        // Log progress every 50 URLs processed
+        if (processedCount > 0 && processedCount % 50 === 0) {
+            log(`[INFO] PROGRESS: Processed ${processedCount} URLs this session. Queue: ${QUEUE.length}, Active: ${activePromises.size}, Total visited: ${VISITED_URLS.size}`, FINAL_OPTIONS.logFilePath);
+        }
         // Fill the active promises up to the max concurrent limit
         while (activePromises.size < FINAL_OPTIONS.maxConcurrent && QUEUE.length > 0) {
             const { url, depth } = QUEUE.shift(); // Get the next URL from the queue
@@ -120,8 +142,9 @@ const crawlWebsite = async (startUrl, options) => {
                 
                 log(`[DEBUG] Added ${queuedCount} new URLs to queue. Filtered out ${filteredCount} URLs. Queue size now: ${QUEUE.length}`, FINAL_OPTIONS.logFilePath);
 
-                // Mark the URL as visited
+                // Mark the URL as visited and increment processed count
                 VISITED_URLS.add(url);
+                processedCount++;
                 
                 // Periodically save progress to persistence (every 10 processed URLs)
                 if (FINAL_OPTIONS.urlPersistence && FINAL_OPTIONS.hostname && VISITED_URLS.size % 10 === 0) {
@@ -140,6 +163,7 @@ const crawlWebsite = async (startUrl, options) => {
                 log(`[ERROR] Error processing URL ${url}: ${error.message}`, FINAL_OPTIONS.logFilePath);
                 log(`[ERROR] Error stack: ${error.stack}`, FINAL_OPTIONS.logFilePath);
                 VISITED_URLS.add(url); // Mark as visited even if failed to avoid retry loops
+                processedCount++;
                 
                 // Save progress even on error (every 10 processed URLs)
                 if (FINAL_OPTIONS.urlPersistence && FINAL_OPTIONS.hostname && VISITED_URLS.size % 10 === 0) {
@@ -162,6 +186,8 @@ const crawlWebsite = async (startUrl, options) => {
         // Wait for a short period to allow for new URLs to be processed
         await new Promise(resolve => setTimeout(resolve, 100)); // Adjust the delay as needed
     }
+
+    log(`[INFO] CRAWL COMPLETED: Processed ${processedCount} URLs in this session. Total unique: ${UNIQUE_URLS.size}, Total visited: ${VISITED_URLS.size}`, FINAL_OPTIONS.logFilePath);
 
     // Final persistence save at completion
     if (FINAL_OPTIONS.urlPersistence && FINAL_OPTIONS.hostname) {
