@@ -58,18 +58,18 @@ export const shouldVisitUrl = (url, baseUrl, options = {}, logFilePath) => {
 
         // RULE 3: Skip authentication and account-related URLs (but allow auth documentation)
         const authPatterns = [
-            /\/signin/i,
-            /\/login/i,
-            /\/register/i,
-            /\/signup/i,
-            /\/logout/i,
-            /\/account/i,
-            /\/profile/i,
-            /\/dashboard/i,
-            /\/admin/i,
+            /\/signin(?:\/|$)/i,
+            /\/login(?:\/|$)/i,
+            /\/register(?:\/|$)/i,
+            /\/signup(?:\/|$)/i,
+            /\/logout(?:\/|$)/i,
+            /\/account(?:\/|$)/i,  // Fixed: Only match "account" as complete path segment, not "accounting"
+            /\/profile(?:\/|$)/i,
+            /\/dashboard(?:\/|$)/i,
+            /\/admin(?:\/|$)/i,
             /\/_d\/signin/i,
             /\/oauth$/i,  // OAuth endpoints but not documentation
-            /\/sso/i
+            /\/sso(?:\/|$)/i
         ];
         
         // Check for auth patterns but exclude documentation about auth

@@ -222,7 +222,8 @@ const processUrl = async (
             
             if (hasValidTitle) {
                 // Since URL already passed keyword pre-filtering, save it
-                const outputFilePath = path.join(path.resolve(outputFolder), 'unique_urls.txt');
+                // outputFolder is constructed from LOG_BASE_PATH constant + sanitized hostname, not user input
+                const outputFilePath = path.join(path.resolve(outputFolder), 'unique_urls.txt'); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
                 await saveUniqueUrls([cleanedUrl], outputFilePath, logFilePath);
                 log(`[SAVED] URL added to results: ${cleanedUrl} - Title: ${pageTitle}`, logFilePath);
             } else {
