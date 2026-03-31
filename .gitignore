@@ -238,6 +238,19 @@ yarn.lock
 .pnpm-store/
 
 # =========================
+# Secrets and Credentials
+# =========================
+*.key
+*.pem
+*.p12
+*credentials*
+*secrets*
+*_rsa
+*_dsa
+*_ecdsa
+*_ed25519
+
+# =========================
 # Project-Specific
 # =========================
 .aidd/

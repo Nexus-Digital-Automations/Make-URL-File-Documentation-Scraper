@@ -44,21 +44,30 @@ const crawlWebsite = async (startUrl, options) => {
 
     // Initialize crawl queue with start URL
     const QUEUE = [{ url: startUrl, depth: 0 }];
-    UNIQUE_URLS.add(normalizeUrl(startUrl));
-    
+    const normalizedStartUrl = normalizeUrl(startUrl);
+    UNIQUE_URLS.add(normalizedStartUrl);
+
     // CONTINUATION FIX: Add all unvisited URLs to queue for processing
     const unvisitedUrls = [...UNIQUE_URLS].filter(url => !VISITED_URLS.has(url));
     log(`[INFO] Continuation check: Found ${UNIQUE_URLS.size} unique URLs, ${VISITED_URLS.size} visited, ${unvisitedUrls.length} unvisited`, FINAL_OPTIONS.logFilePath);
-    
+
     if (unvisitedUrls.length > 0) {
         unvisitedUrls.forEach(url => {
-            // Only add to queue if not already the startUrl (avoid duplicates)
-            if (url !== startUrl) {
+            // Use normalized comparison to avoid trailing-slash duplicates
+            if (normalizeUrl(url) !== normalizedStartUrl) {
                 QUEUE.push({ url, depth: 1 }); // Add with depth 1 since they're discovered links
             }
         });
-        log(`[INFO] CONTINUATION: Added ${unvisitedUrls.length - (unvisitedUrls.includes(startUrl) ? 1 : 0)} unvisited URLs to processing queue`, FINAL_OPTIONS.logFilePath);
+        const addedCount = QUEUE.length - 1;
+        log(`[INFO] CONTINUATION: Added ${addedCount} unvisited URLs to processing queue`, FINAL_OPTIONS.logFilePath);
         log(`[INFO] Total queue size after continuation setup: ${QUEUE.length}`, FINAL_OPTIONS.logFilePath);
+    } else if (UNIQUE_URLS.size > 0) {
+        // All previously discovered URLs have already been visited.
+        // This can happen when a previous session was interrupted before saving discovered links.
+        // Remove start URL from visited so it gets re-crawled to rediscover any missed links.
+        log(`[INFO] All ${UNIQUE_URLS.size} previously discovered URLs have been visited. Re-crawling start URL to check for missed links.`, FINAL_OPTIONS.logFilePath);
+        VISITED_URLS.delete(normalizedStartUrl);
+        VISITED_URLS.delete(startUrl);
     }
     
     // Log start of crawling process
