@@ -261,9 +261,13 @@ export const checkKeywordMatch = (keywords, content, options, logFilePath) => {
         const searchKeyword = options.caseSensitive ? keyword : keyword.toLowerCase();
         
         if (options.exactMatch) {
-            // Word boundary matching for exact matches
-            const regex = new RegExp(`\\\\b${searchKeyword.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}\\\\b`, 'i');
-            return regex.test(searchText);
+            // Word boundary check without dynamic RegExp to avoid ReDoS risk
+            const idx = searchText.indexOf(searchKeyword);
+            if (idx === -1) return false;
+            const isWordChar = (c) => c !== undefined && /\w/.test(c);
+            const before = searchText[idx - 1];
+            const after = searchText[idx + searchKeyword.length];
+            return !isWordChar(before) && !isWordChar(after);
         } else {
             return searchText.includes(searchKeyword);
         }

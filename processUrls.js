@@ -222,7 +222,7 @@ const processUrl = async (
             
             if (hasValidTitle) {
                 // Since URL already passed keyword pre-filtering, save it
-                const outputFilePath = path.join(outputFolder, 'unique_urls.txt');
+                const outputFilePath = path.join(path.resolve(outputFolder), 'unique_urls.txt');
                 await saveUniqueUrls([cleanedUrl], outputFilePath, logFilePath);
                 log(`[SAVED] URL added to results: ${cleanedUrl} - Title: ${pageTitle}`, logFilePath);
             } else {

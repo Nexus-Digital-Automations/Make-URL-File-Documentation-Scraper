@@ -47,7 +47,7 @@ const extractLinks = async (page, logFilePath) => {
                         }
                     });
                 } catch (selectorError) {
-                    console.error(`Error processing selector ${selector}:`, selectorError);
+                    console.error('Error processing selector:', String(selector), String(selectorError.message || selectorError));
                 }
             });
 
