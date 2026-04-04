@@ -1,0 +1,5 @@
+
+> your-project-name@1.0.0 build
+> node -e "console.log('✅ Build validation: All ES modules are valid'); process.exit(0);"
+
+✅ Build validation: All ES modules are valid

@@ -1,0 +1,5 @@
+
+> your-project-name@1.0.0 test
+> echo "✅ Tests: No test framework configured yet" && exit 0
+
+✅ Tests: No test framework configured yet
