@@ -1,0 +1,32 @@
+{
+  "project_type": "node",
+  "has_tests": true,
+  "has_build": true,
+  "has_app": true,
+  "checks": {
+    "tests": {
+      "run_command": "npm test",
+      "command_patterns": ["npm test", "npm run test"],
+      "pass_patterns": ["Tests: No test framework", "passed", "exit 0"],
+      "fail_patterns": ["FAIL", "failed", "Error"]
+    },
+    "build": {
+      "run_command": "npm run build",
+      "command_patterns": ["npm run build"],
+      "pass_patterns": ["Build validation", "successfully"],
+      "fail_patterns": ["error", "Error", "FAIL"]
+    },
+    "lint": {
+      "run_command": "npm run lint",
+      "command_patterns": ["npm run lint", "eslint"],
+      "pass_patterns": [],
+      "fail_patterns": ["error"]
+    },
+    "app_starts": {
+      "run_command": "timeout 8 npm start -- https://example.com '' 2>&1 | grep -m1 BROWSER_LAUNCH_SUCCESS",
+      "command_patterns": ["npm start", "node main.js"],
+      "pass_patterns": ["BROWSER_LAUNCH_SUCCESS"],
+      "fail_patterns": ["BROWSER_LAUNCH_FAILED", "Could not find Chrome"]
+    }
+  }
+}
