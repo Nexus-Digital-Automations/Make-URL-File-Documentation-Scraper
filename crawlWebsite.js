@@ -4,11 +4,12 @@
 // Created: [Current Date]
 // Last Modified: [Current Date]
 
+import path from 'path';
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
-import { 
-    MAX_CONCURRENT_PAGES, 
+import {
+    MAX_CONCURRENT_PAGES,
     BROWSER_LAUNCH_OPTIONS,
     MAX_DEPTH
 } from './config.js';
@@ -16,6 +17,7 @@ import { processUrl } from './processUrls.js';
 import { log } from './logger.js';
 import { normalizeUrl } from './urlUtils.js';
 import { shouldVisitUrl } from './smartUrlFilter.js';
+import { saveUniqueUrls } from './saveUniqueUrls.js';
 
 // Apply stealth plugin to enhance browser automation
 puppeteer.use(StealthPlugin());
@@ -70,6 +72,11 @@ const crawlWebsite = async (startUrl, options) => {
         VISITED_URLS.delete(startUrl);
     }
     
+    // Derive output file path for incremental URL writes
+    const outputFilePath = FINAL_OPTIONS.outputFolder
+        ? path.join(FINAL_OPTIONS.outputFolder, 'unique_urls.txt')
+        : null;
+
     // Log start of crawling process
     log(`Starting crawl from: ${startUrl}`, FINAL_OPTIONS.logFilePath);
 
@@ -137,6 +144,9 @@ const crawlWebsite = async (startUrl, options) => {
                         
                         if (shouldVisitDiscoveredLink) {
                             UNIQUE_URLS.add(link);
+                            if (outputFilePath) {
+                                saveUniqueUrls([link], outputFilePath, FINAL_OPTIONS.logFilePath);
+                            }
                             QUEUE.push({ url: link, depth: depth + 1 });
                             queuedCount++;
                             log(`[DEBUG] Queued for processing: ${link}`, FINAL_OPTIONS.logFilePath);
